@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ferra Creative Performance Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; }
+  .header { background: #1e1b4b; color: white; padding: 20px 28px; display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header span { font-size: 13px; opacity: 0.7; }
+  .controls { padding: 16px 28px; background: white; border-bottom: 1px solid #e5e7eb; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .controls input { border:1px solid #d1d5db; border-radius:8px; padding:7px 14px; font-size:13px; width:280px; outline:none; }
+  .controls input:focus { border-color:#6366f1; box-shadow: 0 0 0 3px #eef2ff; }
+  .filter-btn { border:1px solid #d1d5db; background:white; border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; transition:all 0.15s; }
+  .filter-btn:hover { background:#f3f4f6; }
+  .filter-btn.active { background:#1e1b4b; color:white; border-color:#1e1b4b; }
+  .legend { display:flex; gap:16px; align-items:center; margin-left:auto; font-size:12px; color:#6b7280; }
+  .legend span { display:flex; align-items:center; gap:5px; }
+  .dot { width:10px; height:10px; border-radius:50%; }
+  .wrap { padding: 0 28px 28px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08); font-size:13px; margin-top:16px; }
+  th { background:#1e1b4b; color:white; padding:11px 12px; text-align:left; font-size:12px; font-weight:600; letter-spacing:0.3px; cursor:pointer; user-select:none; white-space:nowrap; position:sticky; top:0; z-index:10; }
+  th:hover { background:#312e81; }
+  th .sort-icon { margin-left:4px; opacity:0.5; font-size:10px; }
+  th.sorted .sort-icon { opacity:1; }
+  td { padding:10px 12px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background:#f9fafb !important; }
+  .stat-bar { display:flex; gap:16px; padding:16px 28px 0; flex-wrap:wrap; }
+  .stat { background:white; border-radius:10px; padding:14px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.07); min-width:130px; }
+  .stat .label { font-size:11px; color:#9ca3af; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .stat .value { font-size:22px; font-weight:700; color:#1e1b4b; margin-top:3px; }
+  .count-badge { font-size:12px; color:#6b7280; margin-left:8px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>Ferra Creative Performance Dashboard</h1>
+    <span>Jan 1 – May 27, 2026 &nbsp;·&nbsp; All Campaigns</span>
+  </div>
+  <span style="font-size:12px;opacity:0.6">Hook Rate &nbsp;·&nbsp; Retention &nbsp;·&nbsp; CTR &nbsp;·&nbsp; CPL</span>
+</div>
+
+<div class="stat-bar" id="stat-bar">
+  <!-- filled by JS -->
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search ad name, adset, campaign..." oninput="applyFilters()"/>
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('active',this)">Active Only</button>
+  <button class="filter-btn" onclick="setFilter('paused',this)">Paused</button>
+  <button class="filter-btn" onclick="setFilter('video',this)">Video Only</button>
+  <div class="legend">
+    <span><div class="dot" style="background:#dcfce7"></div> Strong</span>
+    <span><div class="dot" style="background:#fef9c3"></div> Average</span>
+    <span><div class="dot" style="background:#fee2e2"></div> Weak</span>
+  </div>
+</div>
+
+<div class="wrap">
+<table id="main-table">
+<thead>
+<tr>
+  <th onclick="sortTable(0,'num')" data-type="num">#<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(1,'str')" data-type="str">Ad Name / Adset<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(2,'str')" data-type="str">Status<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(3,'num')" data-type="num">Spend<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(4,'num')" data-type="num">Impressions<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(5,'num')" data-type="num">Hook Rate %<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(6,'num')" data-type="num">Retention %<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(7,'num')" data-type="num">Avg Watch<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(8,'num')" data-type="num">CTR %<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(9,'num')" data-type="num">CPM<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(10,'num')" data-type="num">Leads<span class="sort-icon">↕</span></th>
+  <th onclick="sortTable(11,'num')" data-type="num">CPL<span class="sort-icon">↕</span></th>
+</tr>
+</thead>
+<tbody id="tbody">
+
+    <tr data-num="1" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">1</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">1_Our parents won't go to the gym | Shobhit | Hindi | V</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">3 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹12,540</td>
+      <td style="text-align:right">19,673</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">16.9%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.3%</td>
+      <td style="text-align:right">₹637</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">11</td>
+      <td style="text-align:right;background:#fef9c3">₹1140</td>
+    </tr>
+
+    <tr data-num="2" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">2</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">2_People stop working out | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">6 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹24,114</td>
+      <td style="text-align:right">56,501</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.3s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.95%</td>
+      <td style="text-align:right">₹427</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">46</td>
+      <td style="text-align:right;background:#dcfce7">₹524</td>
+    </tr>
+
+    <tr data-num="3" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">3</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">3_Strength Disappears Slowly | Shobhit | English | Vide</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">5 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹10,378</td>
+      <td style="text-align:right">22,954</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.3s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.83%</td>
+      <td style="text-align:right">₹452</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">19</td>
+      <td style="text-align:right;background:#dcfce7">₹546</td>
+    </tr>
+
+    <tr data-num="4" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">4</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">4_This is Ferra (For parents) | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">6 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹31,120</td>
+      <td style="text-align:right">97,827</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">96.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">17.7%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.1s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.82%</td>
+      <td style="text-align:right">₹318</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">26</td>
+      <td style="text-align:right;background:#fef9c3">₹1197</td>
+    </tr>
+
+    <tr data-num="5" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">5</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">5_Weak back muscles | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹4,437</td>
+      <td style="text-align:right">6,531</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.8%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.3s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.31%</td>
+      <td style="text-align:right">₹679</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">7</td>
+      <td style="text-align:right;background:#fef9c3">₹634</td>
+    </tr>
+
+    <tr data-num="6" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">6</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">6_1500 rupee | Hindi | Shobhit | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">10 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹74,198</td>
+      <td style="text-align:right">319,042</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.9%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.5s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.71%</td>
+      <td style="text-align:right">₹233</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">183</td>
+      <td style="text-align:right;background:#dcfce7">₹405</td>
+    </tr>
+
+    <tr data-num="7" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">7</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">7_Back strength — Get stronger with Ferra | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 50+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹26,421</td>
+      <td style="text-align:right">41,801</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">92.8%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">25.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.87%</td>
+      <td style="text-align:right">₹632</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">28</td>
+      <td style="text-align:right;background:#fef9c3">₹944</td>
+    </tr>
+
+    <tr data-num="8" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">8</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">8_Parents gym nahi jaate | Hindi | AI video | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹11,282</td>
+      <td style="text-align:right">25,033</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.9%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.1s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.88%</td>
+      <td style="text-align:right">₹451</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">9</td>
+      <td style="text-align:right;background:#fef9c3">₹1254</td>
+    </tr>
+
+    <tr data-num="9" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">9</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">9_Arthritis & Osteoporosis | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Arthritis & Osteoporosis | 25 to 65+ | BLR | Open </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹3,693</td>
+      <td style="text-align:right">5,171</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.0%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">18.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.5s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.26%</td>
+      <td style="text-align:right">₹714</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">3</td>
+      <td style="text-align:right;background:#fef9c3">₹1231</td>
+    </tr>
+
+    <tr data-num="10" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">10</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">10_Backpain for parents | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Backpain for parents  | 25 to 65+ | BLR | Open / B</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹2,736</td>
+      <td style="text-align:right">5,829</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.32%</td>
+      <td style="text-align:right">₹469</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fef9c3">₹1368</td>
+    </tr>
+
+    <tr data-num="11" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">11</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">11_Bangalore Parents (Max conversion leads) | English |</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹35,322</td>
+      <td style="text-align:right">75,371</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">91.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">18.6%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.8s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.61%</td>
+      <td style="text-align:right">₹469</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">38</td>
+      <td style="text-align:right;background:#fef9c3">₹930</td>
+    </tr>
+
+    <tr data-num="12" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">12</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">12_Buy something useful (For parents) | Shobhit | Engli</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">7 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹56,489</td>
+      <td style="text-align:right">76,276</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.4%</td>
+      <td style="text-align:right">₹741</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">50</td>
+      <td style="text-align:right;background:#fef9c3">₹1130</td>
+    </tr>
+
+    <tr data-num="13" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">13</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">13_Gift for parents LP | Rohit | Hindi | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">14 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹133,805</td>
+      <td style="text-align:right">248,090</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">90.7%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">4.19%</td>
+      <td style="text-align:right">₹539</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">378</td>
+      <td style="text-align:right;background:#dcfce7">₹354</td>
+    </tr>
+
+    <tr data-num="14" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">14</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">14_If your mom isn't working out | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">6 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹13,672</td>
+      <td style="text-align:right">30,893</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.7%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">26.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.2s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.28%</td>
+      <td style="text-align:right">₹443</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5</td>
+      <td style="text-align:right;background:#fee2e2">₹2734</td>
+    </tr>
+
+    <tr data-num="15" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">15</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">15_If your parents aren't working out | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">If your parents aren't working out | 25 to 65+ | B</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹44,764</td>
+      <td style="text-align:right">149,200</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.41%</td>
+      <td style="text-align:right">₹300</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">48</td>
+      <td style="text-align:right;background:#fef9c3">₹933</td>
+    </tr>
+
+    <tr data-num="16" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">16</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">16_Train smarter, not harder | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Cost Cap: 500 | 20th May | Train smarter, not hard</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹1,208</td>
+      <td style="text-align:right">1,875</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">15.8%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.4s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.08%</td>
+      <td style="text-align:right">₹644</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fef9c3">₹1208</td>
+    </tr>
+
+    <tr data-num="17" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">17</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">17_Diabetes | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Cost Cap: 500 | 19th May | Wait for the Result | T</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹37</td>
+      <td style="text-align:right">70</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">97.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.7%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.0s</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹523</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="18" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">18</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">18_Do Re Me Fa | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Cost Cap: 500 | 18th May | 3 videos | 35 to 65+ | </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹253</td>
+      <td style="text-align:right">410</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.9%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">7.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">4.88%</td>
+      <td style="text-align:right">₹617</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="19" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">19</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">19_Ever wonder V2 | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Ever Wonder V2 | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹4,903</td>
+      <td style="text-align:right">7,098</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">91.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.9%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.18%</td>
+      <td style="text-align:right">₹691</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">6</td>
+      <td style="text-align:right;background:#fef9c3">₹817</td>
+    </tr>
+
+    <tr data-num="20" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">20</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">20_Ever Wonder | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Ever wonder | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹2,270</td>
+      <td style="text-align:right">3,571</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">90.7%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">21.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">7.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">6.3%</td>
+      <td style="text-align:right">₹636</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fef9c3">₹1135</td>
+    </tr>
+
+    <tr data-num="21" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">21</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">21_Extreme fit vs normal fit | Hindi | Shobhit | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Extreme fit vs normal fit | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹7,435</td>
+      <td style="text-align:right">8,892</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">86.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">21.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.3s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.99%</td>
+      <td style="text-align:right">₹836</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">7</td>
+      <td style="text-align:right;background:#fef9c3">₹1062</td>
+    </tr>
+
+    <tr data-num="22" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">22</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">22_Centenarian Workout | Rohit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">3 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹5,864</td>
+      <td style="text-align:right">5,939</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">89.9%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">18.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.7s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">4.68%</td>
+      <td style="text-align:right">₹987</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">11</td>
+      <td style="text-align:right;background:#dcfce7">₹533</td>
+    </tr>
+
+    <tr data-num="23" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">23</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">23_Habit of Working Out | Rohit | Hindi | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Proven | BLR | 35 To 65+ </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹102</td>
+      <td style="text-align:right">144</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">92.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.7s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.47%</td>
+      <td style="text-align:right">₹707</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#dcfce7">₹102</td>
+    </tr>
+
+    <tr data-num="24" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">24</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">24_Here's the truth no one says V2 | Shobhit | English </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">3 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹6,640</td>
+      <td style="text-align:right">6,756</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">87.8%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">7.8s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">8.1%</td>
+      <td style="text-align:right">₹983</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">4</td>
+      <td style="text-align:right;background:#fee2e2">₹1660</td>
+    </tr>
+
+    <tr data-num="25" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">25</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">25_If you aren't working out | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">If you aren't working out | 25 to 65+ | BLR | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹2,274</td>
+      <td style="text-align:right">4,704</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.7%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.62%</td>
+      <td style="text-align:right">₹483</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2274</td>
+    </tr>
+
+    <tr data-num="26" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">26</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">26_Inconvenient part about working out | Hindi | Shobhi</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Inconvenient part about working out | BLR | 35 To </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹8,147</td>
+      <td style="text-align:right">10,075</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">89.7%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5.02%</td>
+      <td style="text-align:right">₹809</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">12</td>
+      <td style="text-align:right;background:#fef9c3">₹679</td>
+    </tr>
+
+    <tr data-num="27" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">27</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">27_Life is already tough | Hindi | Shobhit | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹10,083</td>
+      <td style="text-align:right">17,481</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">91.9%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.8s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.77%</td>
+      <td style="text-align:right">₹577</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">23</td>
+      <td style="text-align:right;background:#dcfce7">₹438</td>
+    </tr>
+
+    <tr data-num="28" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">28</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">28_Getting mom to start strength training | Hindi | Vid</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹12,384</td>
+      <td style="text-align:right">17,113</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.2%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">8.8s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5.97%</td>
+      <td style="text-align:right">₹724</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">14</td>
+      <td style="text-align:right;background:#fef9c3">₹885</td>
+    </tr>
+
+    <tr data-num="29" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">29</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">29_Most people sit all day | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Most people sit all day | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹5,199</td>
+      <td style="text-align:right">6,672</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.2%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">27.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">8.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">13.32%</td>
+      <td style="text-align:right">₹779</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">9</td>
+      <td style="text-align:right;background:#dcfce7">₹578</td>
+    </tr>
+
+    <tr data-num="30" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">30</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">30_My mom is stubborn | Prerna | UGC | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Blr | 32 to 45 | Open | Creators UGC / My mom is s</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹4,154</td>
+      <td style="text-align:right">4,611</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.7%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">9.2s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.77%</td>
+      <td style="text-align:right">₹901</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fee2e2">₹2077</td>
+    </tr>
+
+    <tr data-num="32" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">32</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">32_Nobody called it strength| Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Nobody called it strength | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹5,524</td>
+      <td style="text-align:right">7,879</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">86.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.66%</td>
+      <td style="text-align:right">₹701</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">7</td>
+      <td style="text-align:right;background:#fef9c3">₹789</td>
+    </tr>
+
+    <tr data-num="33" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">33</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">33_Pain becomes common in 40s | Hindi | Shobhit | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">3 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹8,443</td>
+      <td style="text-align:right">13,160</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">96.4%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">29.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">9.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">15.01%</td>
+      <td style="text-align:right">₹642</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">13</td>
+      <td style="text-align:right;background:#fef9c3">₹649</td>
+    </tr>
+
+    <tr data-num="34" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">34</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">34_They just never start | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Blr | 50+ | (INR 2000 Messaging) | Open / Set 5 (v</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹5,036</td>
+      <td style="text-align:right">7,535</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">96.0%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">21.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.5s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.75%</td>
+      <td style="text-align:right">₹668</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">9</td>
+      <td style="text-align:right;background:#dcfce7">₹560</td>
+    </tr>
+
+    <tr data-num="35" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">35</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">35_They're not training for 6 pack - for your parents |</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">6 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹67,709</td>
+      <td style="text-align:right">212,870</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.5%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">27.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.3s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.19%</td>
+      <td style="text-align:right">₹318</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">55</td>
+      <td style="text-align:right;background:#fef9c3">₹1231</td>
+    </tr>
+
+    <tr data-num="36" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">36</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">36_This is Ferra | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">7 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹57,962</td>
+      <td style="text-align:right">162,911</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.5%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">26.6%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.5s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.82%</td>
+      <td style="text-align:right">₹356</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">139</td>
+      <td style="text-align:right;background:#dcfce7">₹417</td>
+    </tr>
+
+    <tr data-num="37" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">37</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">37_This is the best thing | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Scaling | BLR | 35 To 65+</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹23</td>
+      <td style="text-align:right">67</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">86.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.6%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.9s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.49%</td>
+      <td style="text-align:right">₹346</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="38" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">38</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">38_Transform your space | AI | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">3 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹6,296</td>
+      <td style="text-align:right">31,477</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.3%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">38.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.1s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.15%</td>
+      <td style="text-align:right">₹200</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">15</td>
+      <td style="text-align:right;background:#dcfce7">₹420</td>
+    </tr>
+
+    <tr data-num="39" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">39</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">39_Version 1 | He's not training for a 6pack | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹80,743</td>
+      <td style="text-align:right">205,089</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.5%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">28.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.8s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.71%</td>
+      <td style="text-align:right">₹394</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">123</td>
+      <td style="text-align:right;background:#fef9c3">₹656</td>
+    </tr>
+
+    <tr data-num="40" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">40</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">40_Version 2 | He's not training for a 6pack | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 50+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹26,529</td>
+      <td style="text-align:right">38,344</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.4%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">26.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.05%</td>
+      <td style="text-align:right">₹692</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">20</td>
+      <td style="text-align:right;background:#fef9c3">₹1326</td>
+    </tr>
+
+    <tr data-num="41" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">41</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">41_Wait for the result | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Cost Cap: 500 | 18th May | 3 videos | 35 to 65+ | </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹4,065</td>
+      <td style="text-align:right">7,045</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.3%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.7%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.7s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">4.29%</td>
+      <td style="text-align:right">₹577</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fee2e2">₹2033</td>
+    </tr>
+
+    <tr data-num="42" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">42</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">42_Working out isn't hard | Shobhit | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Scaling | BLR | 35 To 65+</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹83</td>
+      <td style="text-align:right">103</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">87.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.3s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.88%</td>
+      <td style="text-align:right">₹810</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#dcfce7">₹83</td>
+    </tr>
+
+    <tr data-num="43" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">43</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">43_Your parents gave you everything | English | Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Blr | 30 to 40 | Open | Gifting Angle / Your paren</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹3,674</td>
+      <td style="text-align:right">6,182</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.4%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">16.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.9s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.99%</td>
+      <td style="text-align:right">₹594</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹3674</td>
+    </tr>
+
+    <tr data-num="44" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">44</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">44_1.5K/ Month | Stay Strong At Home | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">5 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹10,414</td>
+      <td style="text-align:right">28,307</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.3%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.5s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.89%</td>
+      <td style="text-align:right">₹368</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">26</td>
+      <td style="text-align:right;background:#dcfce7">₹401</td>
+    </tr>
+
+    <tr data-num="45" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">45</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">45_1.5K/ Month | That's It | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹24,600</td>
+      <td style="text-align:right">54,629</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.3%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">17.8%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.1s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">6.41%</td>
+      <td style="text-align:right">₹450</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">64</td>
+      <td style="text-align:right;background:#dcfce7">₹384</td>
+    </tr>
+
+    <tr data-num="46" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">46</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">46_Our goal isn't a six pack it's independence old lady</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Cost Cap: 500 | 18th May 2026 | 10 statics | 35 to</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹2,586</td>
+      <td style="text-align:right">5,753</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">18.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5.84%</td>
+      <td style="text-align:right">₹450</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2586</td>
+    </tr>
+
+    <tr data-num="47" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">47</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">47_5 minutes is enough | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">4 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹13,046</td>
+      <td style="text-align:right">26,690</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.0%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">21.8%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.2s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.3%</td>
+      <td style="text-align:right">₹489</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">40</td>
+      <td style="text-align:right;background:#dcfce7">₹326</td>
+    </tr>
+
+    <tr data-num="48" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">48</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">48_Build it back | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Creative Testing_Statics </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹10</td>
+      <td style="text-align:right">36</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">50.0%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">43.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹276</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="49" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">49</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">49_Everyday Life Static_Back | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Creative Testing_Statics </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹14</td>
+      <td style="text-align:right">12</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹1,192</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="50" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">50</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">50_Everyday Life Static_Front | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">BLR | 35 To 65+ | Open / Creative Testing_Statics </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹67</td>
+      <td style="text-align:right">95</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.1%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.11%</td>
+      <td style="text-align:right">₹701</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="51" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">51</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">51_Future Self | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹3</td>
+      <td style="text-align:right">2</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹1,335</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="52" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">52</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">52_Playtime gets Harder | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹16</td>
+      <td style="text-align:right">14</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">35.7%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">37.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹1,163</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="53" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">53</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">53_The Best Habits_female_1500 | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Static - The Best Habits_female_1500 | 25 to 65+ |</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹4,791</td>
+      <td style="text-align:right">8,720</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.51%</td>
+      <td style="text-align:right">₹549</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fee2e2">₹2395</td>
+    </tr>
+
+    <tr data-num="54" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">54</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">54_2k/month for 2 | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 2 : BLR | 29 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹2,124</td>
+      <td style="text-align:right">9,714</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.0%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.71%</td>
+      <td style="text-align:right">₹219</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fef9c3">₹1062</td>
+    </tr>
+
+    <tr data-num="55" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">55</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">55_Back pain (2K for 2) | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 3 : BLR | 29 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹463</td>
+      <td style="text-align:right">1,055</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">29.6%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.61%</td>
+      <td style="text-align:right">₹439</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#dcfce7">₹463</td>
+    </tr>
+
+    <tr data-num="56" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">56</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">56_Everyday Life_Back | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 2 : BLR | 29 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹24</td>
+      <td style="text-align:right">33</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">6.1%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.03%</td>
+      <td style="text-align:right">₹726</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="57" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">57</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">57_Everyday Life_Front | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Blr | 50+ | (INR 2000 Messaging) | Open / Set 3 : </div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹1,259</td>
+      <td style="text-align:right">2,133</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.9%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">15.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.3%</td>
+      <td style="text-align:right">₹590</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5</td>
+      <td style="text-align:right;background:#dcfce7">₹252</td>
+    </tr>
+
+    <tr data-num="58" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">58</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">58_Moments like this | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 4 : BLR | 29 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹1,458</td>
+      <td style="text-align:right">3,973</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.6%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.69%</td>
+      <td style="text-align:right">₹367</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2</td>
+      <td style="text-align:right;background:#fef9c3">₹729</td>
+    </tr>
+
+    <tr data-num="59" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">59</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">59_Playtime shouldn't get harder | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 4 : BLR | 29 To 65+ | Open / Static - Playtime</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹2,173</td>
+      <td style="text-align:right">3,342</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">4.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">23.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.9s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.42%</td>
+      <td style="text-align:right">₹650</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2173</td>
+    </tr>
+
+    <tr data-num="60" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">60</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">60_Some strength stays forever | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Static - Some strength stays forever | 25 to 65+ |</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹1,702</td>
+      <td style="text-align:right">2,089</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.2%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">18.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.91%</td>
+      <td style="text-align:right">₹815</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="61" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">61</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">61_Stay Strong At Home (2K for 2) | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Blr | 50+ | (INR 2000 Messaging) | Open / Set 1 : </div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹5,733</td>
+      <td style="text-align:right">27,408</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.8%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.83%</td>
+      <td style="text-align:right">₹209</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">12</td>
+      <td style="text-align:right;background:#dcfce7">₹478</td>
+    </tr>
+
+    <tr data-num="62" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">62</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">62_Strength for years ahead | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 4 : BLR | 29 To 65+ | Open / Static - Strength</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹2,099</td>
+      <td style="text-align:right">2,723</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.7%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">14.6%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.9s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.53%</td>
+      <td style="text-align:right">₹771</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2099</td>
+    </tr>
+
+    <tr data-num="63" data-status="PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">63</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">63_Strength means indepedence | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">5 adsets</div>
+      </td>
+      <td style="text-align:center"><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">PAUSED</span></td>
+      <td style="text-align:right">₹8,527</td>
+      <td style="text-align:right">10,916</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">7.4%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">29.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.4s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.72%</td>
+      <td style="text-align:right">₹781</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">11</td>
+      <td style="text-align:right;background:#fef9c3">₹775</td>
+    </tr>
+
+    <tr data-num="64" data-status="ADSET_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">64</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">64_Strong for daily life | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Set 2 : BLR | 29 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ADSET_PAUSED</span></td>
+      <td style="text-align:right">₹70</td>
+      <td style="text-align:right">137</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">2.2%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">29.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.46%</td>
+      <td style="text-align:right">₹514</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="65" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">65</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">65_The best habits_Male_1500 | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Static - The best habits_Male_1500 | 25 to 65+ | B</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹2,459</td>
+      <td style="text-align:right">5,921</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.53%</td>
+      <td style="text-align:right">₹415</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2459</td>
+    </tr>
+
+    <tr data-num="66" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">66</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">66_Staying Capable | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹1</td>
+      <td style="text-align:right">3</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹177</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="67" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">67</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">67_Strength for moments | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹23</td>
+      <td style="text-align:right">38</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">21.1%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">56.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.0s</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹611</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="68" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">68</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">68_Strength for Years | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹12</td>
+      <td style="text-align:right">13</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">15.4%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">7.69%</td>
+      <td style="text-align:right">₹896</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="69" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">69</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">69_Strength Means Independence | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹128</td>
+      <td style="text-align:right">95</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">3.2%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">45.8%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.11%</td>
+      <td style="text-align:right">₹1,348</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="70" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">70</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">70_Strong for Daily Life | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹0</td>
+      <td style="text-align:right">2</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹70</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="71" data-status="CAMPAIGN_PAUSED">
+      <td style="text-align:center;font-weight:700;color:#6b7280">71</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">71_Work Commute Screens | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Statics | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">CAMPAIGN_PAUSED</span></td>
+      <td style="text-align:right">₹42</td>
+      <td style="text-align:right">47</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">4.3%</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">50.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">2.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">4.26%</td>
+      <td style="text-align:right">₹904</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="80" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">80</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">80_Our goal isn't a six pack it's independence old man </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C1-AS2] Statics | CC Rs380 | Rs3,000/day</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹933</td>
+      <td style="text-align:right">1,221</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">4.6%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">17.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">3.93%</td>
+      <td style="text-align:right">₹764</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="81" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">81</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">81_Rohit IG Copy_Shobhit_AI_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C3-AS2] Talking Head English | CC Rs700 | Rs1,000</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹1,611</td>
+      <td style="text-align:right">3,915</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">92.8%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">19.1%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1.69%</td>
+      <td style="text-align:right">₹411</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹1611</td>
+    </tr>
+
+    <tr data-num="82" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">82</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">82_Hahaha after 50_Brandshark_Hindi_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C1-AS1] Hindi Videos | CC Rs450 | Rs3,500/day</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹2,196</td>
+      <td style="text-align:right">2,107</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.7%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">17.2%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">5.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.18%</td>
+      <td style="text-align:right">₹1,042</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="83" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">83</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">83_Rohit IG Copy_Suraj_Brandshark_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C3-AS2] Talking Head English | CC Rs700 | Rs1,000</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹242</td>
+      <td style="text-align:right">275</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.3%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">24.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">6.0s</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">2.91%</td>
+      <td style="text-align:right">₹881</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#dcfce7">₹242</td>
+    </tr>
+
+    <tr data-num="84" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">84</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">84_This is what 50+_Brandshark_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C3-AS3] Silent Montage | CC Rs700 | Rs1,000/day</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹160</td>
+      <td style="text-align:right">287</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.1%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">22.7%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.39%</td>
+      <td style="text-align:right">₹559</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="85" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">85</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">85_After 40_Strength Training_Brandshark_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C3-AS3] Silent Montage | CC Rs700 | Rs1,000/day</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹1,756</td>
+      <td style="text-align:right">3,997</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">94.2%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">3.0s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">1.4%</td>
+      <td style="text-align:right">₹439</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="86" data-status="ACTIVE">
+      <td style="text-align:center;font-weight:700;color:#6b7280">86</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">86_Do this to do this easily_Brandshark_Video</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">[C3-AS4] Social Proof Video | CC Rs700 | Rs500/day</div>
+      </td>
+      <td style="text-align:center"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">ACTIVE</span></td>
+      <td style="text-align:right">₹888</td>
+      <td style="text-align:right">1,565</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">95.5%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">15.4%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">4.0s</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">0.96%</td>
+      <td style="text-align:right">₹567</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fef9c3">₹888</td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Here's the truth no one says | Shobhit | Video | Creati</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Here's the truth no one says | BLR | 29 To 65+ | O</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹2,213</td>
+      <td style="text-align:right">3,086</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">93.2%</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">20.0%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">7.0s</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">9.3%</td>
+      <td style="text-align:right">₹717</td>
+      <td style="text-align:center;background:#fef9c3;font-weight:600">1</td>
+      <td style="text-align:right;background:#fee2e2">₹2213</td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Strength Disappears Slowly | Shobhit | Video | Master L</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹0</td>
+      <td style="text-align:right">1</td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">100.0%</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600">12.5%</td>
+      <td style="text-align:center;font-size:12px;color:#6b7280">1.0s</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹80</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Everyday Life Static_Back | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Videos | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹18</td>
+      <td style="text-align:right">17</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">5.88%</td>
+      <td style="text-align:right">₹1,057</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Strength for moments | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Videos | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹24</td>
+      <td style="text-align:right">31</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">19.35%</td>
+      <td style="text-align:right">₹765</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Everyday Life Static_Front | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Videos | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹68</td>
+      <td style="text-align:right">71</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#dcfce7;font-weight:600">9.86%</td>
+      <td style="text-align:right">₹963</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+
+    <tr data-num="9999" data-status="UNKNOWN">
+      <td style="text-align:center;font-weight:700;color:#6b7280">—</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">Build it back | Static</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:2px">Creative Testing_Videos | BLR | 35 To 65+ | Open</div>
+      </td>
+      <td style="text-align:center"><span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">UNKNOWN</span></td>
+      <td style="text-align:right">₹35</td>
+      <td style="text-align:right">75</td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;font-size:12px;color:#6b7280"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:center;background:#f3f4f6;font-weight:600"><span style="color:#9ca3af">—</span></td>
+      <td style="text-align:right">₹466</td>
+      <td style="text-align:center;background:#fee2e2;font-weight:600"><span style="color:#9ca3af">0</span></td>
+      <td style="text-align:right;background:#f3f4f6"><span style="color:#9ca3af">—</span></td>
+    </tr>
+</tbody>
+</table>
+<div id="no-results" style="display:none;text-align:center;padding:40px;color:#9ca3af;font-size:14px;">No ads match your filter.</div>
+</div>
+
+<script>
+let currentFilter = 'all';
+let sortCol = -1;
+let sortDir = 1;
+
+// Build stats
+function buildStats() {
+  const rows = [...document.querySelectorAll('#tbody tr')];
+  const total = rows.length;
+  const active = rows.filter(r => r.dataset.status === 'ACTIVE').length;
+  let spend = 0, leads = 0;
+  rows.forEach(r => {
+    const cells = r.querySelectorAll('td');
+    const s = cells[3].textContent.replace(/[₹,]/g,'').trim();
+    const l = cells[10].textContent.trim();
+    if(!isNaN(+s)) spend += +s;
+    if(!isNaN(+l)) leads += +l;
+  });
+  document.getElementById('stat-bar').innerHTML = `
+    <div class="stat"><div class="label">Total Ads</div><div class="value">${total} <span class="count-badge">(${active} active)</span></div></div>
+    <div class="stat"><div class="label">Total Spend</div><div class="value">₹${Math.round(spend).toLocaleString('en-IN')}</div></div>
+    <div class="stat"><div class="label">Total Leads</div><div class="value">${leads}</div></div>
+    <div class="stat"><div class="label">Avg CPL</div><div class="value">${leads > 0 ? '₹'+Math.round(spend/leads).toLocaleString('en-IN') : '—'}</div></div>
+  `;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const rows = document.querySelectorAll('#tbody tr');
+  let visible = 0;
+  rows.forEach(r => {
+    const text = r.textContent.toLowerCase();
+    const status = r.dataset.status;
+    const isVideo = r.querySelector('td:nth-child(6)').textContent.trim() !== '—';
+    let show = text.includes(q);
+    if (currentFilter === 'active' && status !== 'ACTIVE') show = false;
+    if (currentFilter === 'paused' && status !== 'PAUSED') show = false;
+    if (currentFilter === 'video' && !isVideo) show = false;
+    r.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function sortTable(colIdx, type) {
+  if (sortCol === colIdx) sortDir *= -1;
+  else { sortCol = colIdx; sortDir = 1; }
+
+  document.querySelectorAll('th').forEach((th,i) => {
+    th.classList.toggle('sorted', i === colIdx);
+    const icon = th.querySelector('.sort-icon');
+    if(icon) icon.textContent = i === colIdx ? (sortDir === 1 ? ' ↓' : ' ↑') : ' ↕';
+  });
+
+  const tbody = document.getElementById('tbody');
+  const rows = [...tbody.querySelectorAll('tr')];
+  rows.sort((a, b) => {
+    let va = a.querySelectorAll('td')[colIdx].textContent.replace(/[₹,s%]/g,'').trim();
+    let vb = b.querySelectorAll('td')[colIdx].textContent.replace(/[₹,s%]/g,'').trim();
+    if (type === 'num') {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return (va - vb) * sortDir;
+    }
+    return va.localeCompare(vb) * sortDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+buildStats();
+</script>
+</body>
+</html>
